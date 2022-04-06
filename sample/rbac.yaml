@@ -1,0 +1,29 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: mesh-manager
+rules:
+  - apiGroups: [ "" ]
+    resources: [ "pods" ]
+    verbs: [ "get", "watch", "list" ]
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  namespace: default
+  name: mesh-manager
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: mesh-manager
+subjects:
+  - kind: ServiceAccount
+    name: mesh-manager
+    namespace: default
+roleRef:
+  kind: ClusterRole
+  name: mesh-manager
+  apiGroup: rbac.authorization.k8s.io

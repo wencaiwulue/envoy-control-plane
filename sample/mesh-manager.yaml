@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: mesh-manager
+  name: mesh-manager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mesh-manager
+  template:
+    metadata:
+      labels:
+        app: mesh-manager
+    spec:
+      containers:
+        - image: naison/mesh-manager:v0.0.1
+          name: mesh-manager
+      serviceAccountName: mesh-manager
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: mesh-manager
+  name: mesh-manager
+spec:
+  ports:
+    - port: 18000
+      protocol: TCP
+      targetPort: 18000
+  selector:
+    app: mesh-manager
+  type: ClusterIP
