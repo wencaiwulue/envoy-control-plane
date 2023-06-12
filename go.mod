@@ -9,11 +9,10 @@ require (
 	google.golang.org/grpc v1.43.0
 	google.golang.org/protobuf v1.27.1
 	k8s.io/api v0.23.2
+	k8s.io/apimachinery v0.23.2
 	k8s.io/client-go v0.23.2
 	sigs.k8s.io/controller-runtime v0.11.0
 )
-
-require k8s.io/apimachinery v0.23.2
 
 require (
 	github.com/census-instrumentation/opencensus-proto v0.2.1 // indirect

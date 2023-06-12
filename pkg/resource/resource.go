@@ -6,14 +6,18 @@ import (
 	endpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	corsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/cors/v3"
+	grpcwebv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/grpc_web/v3"
 	router "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/router/v3"
 	httpinspector "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/http_inspector/v3"
 	hcm "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	tcp "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/tcp_proxy/v3"
+	httpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/upstreams/http/v3"
 	v32 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"github.com/golang/protobuf/ptypes/wrappers"
+	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"time"
 
@@ -25,11 +29,28 @@ func buildListener(name string, port uint32) *listener.Listener {
 	httpManager := &hcm.HttpConnectionManager{
 		CodecType:  hcm.HttpConnectionManager_AUTO,
 		StatPrefix: "http",
-		HttpFilters: []*hcm.HttpFilter{{
-			Name: wellknown.Router,
-			ConfigType: &hcm.HttpFilter_TypedConfig{
-				TypedConfig: util.MessageToAny(&router.Router{}),
+		HttpFilters: []*hcm.HttpFilter{
+			{
+				Name: wellknown.GRPCWeb,
+				ConfigType: &hcm.HttpFilter_TypedConfig{
+					TypedConfig: util.MessageToAny(&grpcwebv3.GrpcWeb{}),
+				},
 			},
+			{
+				Name: wellknown.CORS,
+				ConfigType: &hcm.HttpFilter_TypedConfig{
+					TypedConfig: util.MessageToAny(&corsv3.Cors{}),
+				},
+			},
+			{
+				Name: wellknown.Router,
+				ConfigType: &hcm.HttpFilter_TypedConfig{
+					TypedConfig: util.MessageToAny(&router.Router{}),
+				},
+			},
+		},
+		UpgradeConfigs: []*hcm.HttpConnectionManager_UpgradeConfig{{
+			UpgradeType: "websocket",
 		}},
 		RouteSpecifier: &hcm.HttpConnectionManager_Rds{
 			Rds: &hcm.Rds{
@@ -113,6 +134,13 @@ func buildCluster(name string) *cluster.Cluster {
 		Name:                 name,
 		ConnectTimeout:       durationpb.New(connectTimeout),
 		ClusterDiscoveryType: &cluster.Cluster_Type{Type: cluster.Cluster_EDS},
+		TypedExtensionProtocolOptions: map[string]*anypb.Any{
+			"envoy.extensions.upstreams.http.v3.HttpProtocolOptions": util.MessageToAny(&httpv3.HttpProtocolOptions{
+				UpstreamProtocolOptions: &httpv3.HttpProtocolOptions_UseDownstreamProtocolConfig{
+					UseDownstreamProtocolConfig: &httpv3.HttpProtocolOptions_UseDownstreamHttpConfig{},
+				},
+			}),
+		},
 		EdsClusterConfig: &cluster.Cluster_EdsClusterConfig{
 			EdsConfig: &core.ConfigSource{
 				ResourceApiVersion: resource.DefaultAPIVersion,
